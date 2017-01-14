@@ -12,13 +12,22 @@ class QAgent(object):
                  random_action_rate=0.5,
                  random_action_decay_rate=0.8):
         """
+        Q-learning agent
 
-        :param actions: <int> of possible actions
-        :param sampling: <array> of sampling rate for each value in observation space
+        :param sampling: <array> of sampling rate for each variable in observation space
+        :param max_val: <array> of maximum values or each variable in observation space
+        :param num_actions: <int> of possible actions
+        :param alpha: <float> learning rate (default: 0.3)
+        :param gamma: <float> discount rate (default: 0.7)
+        :param random_action_rate: <float> random action rate (default: 0.5)
+        :param random_action_decay_rate: <float> decay rate for random action rate (default: 0.99)
         """
 
+        # Input check
         if len(sampling) != len(max_val):
             raise ValueError('length of sampling must correspond to length of borders')
+
+        # Initialization of agent variables
         self.Q = np.random.uniform(low=-1, high=1,
                                    size=(tuple(sampling) + tuple([num_actions])))
         self.alpha = alpha
@@ -28,18 +37,15 @@ class QAgent(object):
         self.num_actions = num_actions
         self.state = 0
         self.action = 0
+        self.borders = []
 
         # Sampling of space
-        self.borders = []
         for i in range(len(sampling)):
             self.borders.append([])
-
             if sampling[i] == 2:
                 self.borders[i].append(0)
                 continue
-
             part = 2 * max_val[i] / (sampling[i] - 2)
-
             self.borders[i].append(-max_val[i])
             for j in range(sampling[i] - 3):
                 self.borders[i].append(self.borders[i][j] + part)
@@ -49,9 +55,10 @@ class QAgent(object):
         """
         Sampling of observation
 
-        :param observation:
-        :return: <list> state corresponded to observation
+        :param observation: <array> of observation values
+        :return: <tuple> state corresponded to observation
         """
+
         state = []
         for i in range(len(observation)):
             for j in range(len(self.borders[i])):
@@ -66,19 +73,36 @@ class QAgent(object):
         return tuple(state)
 
     def init_state(self, observation):
+        """
+        Initialize first state in episode
+
+        :param observation: <array> of observation values
+        :return: <int> first action
+        """
+
         self.state = self.sampling_state(observation)
         self.action = self.Q[self.state].argmax()
+        return self.action
 
     def act(self, observation, reward, done):
+        """
+        Action corresponding to the current observation
+
+        :param observation: observation: <array> of observation values
+        :param reward: <int> reward for previous action
+        :param done: <bool> is environment finished
+        """
+
         new_sate = self.sampling_state(observation)
 
+        # Whether the action is selected randomly
         choose_random_action = self.random_action_rate > np.random.uniform(0, 1)
-
         if choose_random_action:
             new_action = np.random.randint(0, self.num_actions - 1)
         else:
             new_action = self.Q[new_sate].argmax()
 
+        # Updating Q matrix
         self.Q[self.state][self.action] = (1 - alpha) * self.Q[self.state][self.action] + \
                                           alpha * (reward + gamma * self.Q[new_sate][new_action])
 
@@ -96,7 +120,7 @@ if __name__ == '__main__':
 
     # Q-learning parameters
     alpha = 0.2
-    gamma = 0.7
+    gamma = 1
     random_action_rate = 0.5
     random_action_decay_rate = 0.99
 
@@ -119,7 +143,8 @@ if __name__ == '__main__':
     for episode in range(num_episodes):
 
         observation = env.reset()
-        action = agent.act(observation, 1, False)
+        action = agent.init_state(observation)
+        #action = agent.act(observation, 1, False)
 
         for step in range(max_steps):
             observation, reward, done, info = env.step(action)
