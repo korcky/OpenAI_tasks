@@ -128,7 +128,7 @@ if __name__ == '__main__':
     goal_steps = 195
     max_steps = 200
     average_iterations = 100
-    num_episodes = 50000
+    num_episodes = 10000
 
     last_time_steps = np.ndarray(0)
 
@@ -166,6 +166,10 @@ if __name__ == '__main__':
                                                             last_time_steps.std()))
             break
 
-
-    plt.plot(x, y)
+    x_, y_ = [], []
+    sam = 20
+    for i in range(int(len(x)/sam) - 1):
+        x_.append(np.sum(x[i * sam: ((i + 1) * sam)]) / sam)
+        y_.append(np.sum(y[i * sam: ((i + 1) * sam)]) / sam)
+    plt.plot(x_, y_)
     plt.show()
